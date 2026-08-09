@@ -15,6 +15,7 @@ resource "azurerm_resource_group" "rg1" {
   name     = "rg1-test"
   location = "Central India"
 }
+
 resource "azurerm_storage_account" "saTest" {
   name                     = "sadhirajtest"
   resource_group_name      = azurerm_resource_group.rg1.name

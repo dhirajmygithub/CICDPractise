@@ -1,0 +1,60 @@
+name: 'Terraform CI/CD Pipeline'
+
+on:
+  # Triggers when pushing to feature/cicd2 OR main
+  push:
+    branches:
+      - feature/cicd2
+      - main
+  # Triggers when opening/updating a PR targeting main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  terraform:
+    name: 'Terraform Pipeline'
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout Code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Setup Terraform CLI
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.0
+
+      # 3. Terraform Init (Runs on BOTH feature/cicd2 & main)
+      - name: Terraform Init
+        run: terraform init
+        env:
+           ARM_CLIENT_ID: "6e95fee0-4770-4558-a164-74608509e837"
+           ARM_CLIENT_SECRET: "k5~8Q~gyYjrwTju5WtBmWJNOl.cCghH-DtBDqagP"
+           ARM_SUBSCRIPTION_ID: "d1e2e70f-5eec-4913-a1bd-9bbdd9369c70"
+           ARM_TENANT_ID: "1c617179-6d77-43bd-9e77-fffbda9eb462"
+
+      # 4. Terraform Validate (Runs on BOTH feature/cicd2 & main)
+      - name: Terraform Validate
+        run: terraform validate
+
+      # 5. Terraform Plan (Runs on BOTH feature/cicd2 & main)
+      - name: Terraform Plan
+        run: terraform plan
+        env:
+           ARM_CLIENT_ID: "6e95fee0-4770-4558-a164-74608509e837"
+           ARM_CLIENT_SECRET: "k5~8Q~gyYjrwTju5WtBmWJNOl.cCghH-DtBDqagP"
+           ARM_SUBSCRIPTION_ID: "d1e2e70f-5eec-4913-a1bd-9bbdd9369c70"
+           ARM_TENANT_ID: "1c617179-6d77-43bd-9e77-fffbda9eb462"
+
+      # 6. Terraform Apply (ONLY runs when merged/pushed to main)
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve
+        env:
+           ARM_CLIENT_ID: "6e95fee0-4770-4558-a164-74608509e837"
+           ARM_CLIENT_SECRET: "k5~8Q~gyYjrwTju5WtBmWJNOl.cCghH-DtBDqagP"
+           ARM_SUBSCRIPTION_ID: "d1e2e70f-5eec-4913-a1bd-9bbdd9369c70"
+           ARM_TENANT_ID: "1c617179-6d77-43bd-9e77-fffbda9eb462"
