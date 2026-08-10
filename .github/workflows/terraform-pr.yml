@@ -75,12 +75,15 @@ jobs:
 
   # ----------------------------------------------------------
   # JOB 2 - TERRAFORM APPLY
-  # ONLY runs when PR is merged into main (no review required)
+  # PAUSES for manual approval from Architect before running!
   # ----------------------------------------------------------
   terraform-apply:
     name: 'Terraform Apply'
     needs: terraform-plan
     runs-on: ubuntu-latest
+
+    # 🛑 PAUSES pipeline for manual approval under Environment 'production'
+    environment: production
 
     # Only run Apply on the main branch (after PR is merged)
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
