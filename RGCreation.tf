@@ -11,6 +11,10 @@ provider "azurerm" {
   features {}
 }
 
+resource "azurerm_resource_group" "rg2" {
+  name     = "rg2-test"
+  location = "Central India"
+}
 resource "azurerm_resource_group" "rg3" {
   name     = "rg1-test"
   location = "Central India"
