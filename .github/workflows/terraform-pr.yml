@@ -1,26 +1,16 @@
 name: 'Terraform CI/CD Pipeline'
 
 on:
-
   # ==========================================================
-  # 1. PUSH TO FEATURE BRANCH
-  #    -> Terraform PLAN only
+  # 1. PUSH TO FEATURE BRANCH OR MAIN BRANCH
   # ==========================================================
   push:
     branches:
       - feature/ApplyAfterManualApproval
-
+      - main
 
   # ==========================================================
-  # 2. PR EVENTS
-  #
-  #    When PR is opened/updated:
-  #       -> PLAN
-  #
-  #    When PR is approved:
-  #       -> PLAN again
-  #       -> Architect approval
-  #       -> APPLY
+  # 2. PULL REQUEST EVENTS (Validate & Plan only)
   # ==========================================================
   pull_request:
     branches:
@@ -30,69 +20,37 @@ on:
       - synchronize
       - reopened
 
-
-  # ==========================================================
-  # 3. PR REVIEW EVENT
-  #
-  #    When someone APPROVES the PR:
-  #       -> PLAN
-  #       -> Manual Architect Approval
-  #       -> APPLY
-  # ==========================================================
-  pull_request_review:
-    types:
-      - submitted
-
-
 # ============================================================
 # Permissions
 # ============================================================
 permissions:
   contents: read
 
-
 # ============================================================
-# JOB 1 - TERRAFORM PLAN
+# JOBS
 # ============================================================
 jobs:
 
+  # ----------------------------------------------------------
+  # JOB 1 - TERRAFORM PLAN
+  # Runs on: Feature Branch push, PR creation/update, and Main push
+  # ----------------------------------------------------------
   terraform-plan:
-    name: 'Terraform Plan'
+    name: 'Terraform Validate & Plan'
     runs-on: ubuntu-latest
 
-    # Run PLAN when:
-    #
-    # 1. Feature branch is pushed
-    # 2. PR is opened/updated/reopened
-    # 3. PR is approved
-    #
-    if: |
-      github.event_name == 'push' ||
-      github.event_name == 'pull_request' ||
-      (
-        github.event_name == 'pull_request_review' &&
-        github.event.review.state == 'approved'
-      )
-
     steps:
-
-      # ------------------------------------------------------
-      # Checkout
-      # ------------------------------------------------------
+      # Checkout Code
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # ------------------------------------------------------
       # Setup Terraform
-      # ------------------------------------------------------
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.8.0
 
-      # ------------------------------------------------------
       # Terraform Init
-      # ------------------------------------------------------
       - name: Terraform Init
         run: terraform init
         env:
@@ -101,16 +59,11 @@ jobs:
            ARM_SUBSCRIPTION_ID: "d1e2e70f-5eec-4913-a1bd-9bbdd9369c70"
            ARM_TENANT_ID: "1c617179-6d77-43bd-9e77-fffbda9eb462"
 
-
-      # ------------------------------------------------------
       # Terraform Validate
-      # ------------------------------------------------------
       - name: Terraform Validate
         run: terraform validate
 
-      # ------------------------------------------------------
       # Terraform Plan
-      # ------------------------------------------------------
       - name: Terraform Plan
         run: terraform plan
         env:
@@ -120,65 +73,30 @@ jobs:
            ARM_TENANT_ID: "1c617179-6d77-43bd-9e77-fffbda9eb462"
 
 
-
-  # ============================================================
+  # ----------------------------------------------------------
   # JOB 2 - TERRAFORM APPLY
-  #
-  # This job ONLY runs when:
-  #
-  # 1. PR review was submitted
-  # 2. Review state is APPROVED
-  #
-  # AND
-  #
-  # 3. Architect manually approves the "terraform-apply"
-  #    GitHub Environment
-  #
-  # ============================================================
+  # ONLY runs when PR is merged into main (no review required)
+  # ----------------------------------------------------------
   terraform-apply:
     name: 'Terraform Apply'
-
     needs: terraform-plan
-
     runs-on: ubuntu-latest
 
-    if: |
-      github.event_name == 'pull_request_review' &&
-      github.event.review.state == 'approved'
-
-    # ========================================================
-    # IMPORTANT:
-    #
-    # Configure a GitHub Environment named:
-    #
-    # terraform-apply
-    #
-    # Add your Architect as a Required Reviewer.
-    #
-    # The job will PAUSE here until Architect approves it.
-    # ========================================================
-    environment:
-      name: terraform-apply
+    # Only run Apply on the main branch (after PR is merged)
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
-
-      # ------------------------------------------------------
-      # Checkout
-      # ------------------------------------------------------
+      # Checkout Code
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # ------------------------------------------------------
       # Setup Terraform
-      # ------------------------------------------------------
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.8.0
 
-      # ------------------------------------------------------
       # Terraform Init
-      # ------------------------------------------------------
       - name: Terraform Init
         run: terraform init
         env:
@@ -187,10 +105,7 @@ jobs:
            ARM_SUBSCRIPTION_ID: "d1e2e70f-5eec-4913-a1bd-9bbdd9369c70"
            ARM_TENANT_ID: "1c617179-6d77-43bd-9e77-fffbda9eb462"
 
-
-      # ------------------------------------------------------
       # Terraform Apply
-      # ------------------------------------------------------
       - name: Terraform Apply
         run: terraform apply -auto-approve
         env:
@@ -198,4 +113,3 @@ jobs:
            ARM_CLIENT_SECRET: "k5~8Q~gyYjrwTju5WtBmWJNOl.cCghH-DtBDqagP"
            ARM_SUBSCRIPTION_ID: "d1e2e70f-5eec-4913-a1bd-9bbdd9369c70"
            ARM_TENANT_ID: "1c617179-6d77-43bd-9e77-fffbda9eb462"
-
